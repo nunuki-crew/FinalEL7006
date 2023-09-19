@@ -9,4 +9,4 @@ import os
 
 # FOR TESTING
 EDFDIR = "D:\\OneDrive\\OneDrive - Universidad de Chile\\Semestre X\\Inteligencia\\Proyecto\\dataset\\tuh_eeg"
-
+# EDFDIR = "c:\\Users\\TheSy\\Desktop\\tuh_eeg"
