@@ -184,9 +184,9 @@ def prep(path, save = False,mode = "per_win", save_dir = "data", sep = "\\"):
 
     if save:
         if mode == "per_channel":
-            loc_df.to_csv("prep_channels.csv", encoding= "utf-8" )
+            loc_df.to_csv("prep_channels.csv", encoding= "utf-8" ,index = False)
         elif mode == "per_win":
-            loc_df.to_csv("prep_windows.csv", encoding= "utf-8")
+            loc_df.to_csv("prep_windows.csv", encoding= "utf-8", index = False)
                 
     return loc_df
 
