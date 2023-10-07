@@ -7,13 +7,15 @@ Ammi Beltrán & Fernanda Borja
 import os
 import mne
 import glob
+#
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+
 import copy
 import pandas as pd
-import torch
 
+import torch 
 # FOR TESTING
 # EDFDIR = "D:\\OneDrive\\OneDrive - Universidad de Chile\\Semestre X\\Inteligencia\\Proyecto\\dataset\\tuh_eeg"
 EDFDIR = "c:\\Users\\TheSy\\Desktop\\tuh_eeg"
@@ -53,7 +55,7 @@ def temporal_crop(data, tin = 60, tfin = 12*60):
     croped = data_copy.crop(tmin = tin, tmax = min(tfin, int(data.times[-1])))
     return croped
 
-def get_epochs(data, channels, window = 20.0):
+def get_epochs(data, channels, window = 20):
     ''' 
     window es la ventana de tiempo
     '''
@@ -82,7 +84,7 @@ def normalization(epochs):
     values = obj.fit_transform(epochs.get_data())
     return values
 
-def EDFprep(edf, n_channels = 19, norm = True, random = True, long = False):
+def EDFprep(edf, n_channels = 19, norm = True, random = True, ):
     '''
     Pipeline
     '''
@@ -90,24 +92,47 @@ def EDFprep(edf, n_channels = 19, norm = True, random = True, long = False):
     #Random channel select
     channels = edf.ch_names
     if random:
-        np.random.shuffle(channels)
-    channels = channels[:n_channels]
-
-    channel_data = channel_select(edf, channels)
-    clip(channel_data,channels)
-    t = temporal_crop(channel_data)
+        ch = np.random.choice(channels[:-3], size = n_channels, replace=False)
+    else:
+        ch = channels[:n_channels]
+    
+    channel_data = channel_select(edf, ch)
+    clip(channel_data,ch)
     if(int(edf.times[-1]) < 100):
         return np.empty(0)
     filtered = eeg_filter(channel_data)
     trimmed_data = temporal_crop(filtered)
     down_data = downsample(trimmed_data)
-    epochs = get_epochs(down_data, channels)
+    epochs = get_epochs(down_data, ch)
     if norm:
         norm_data = normalization(epochs)
+        norm_data = np.delete(norm_data,-1,2)
         return norm_data
-    return epochs.get_data()
+    epochs = np.delete(epochs,-1,2)    
+    return epochs
 
-def prep(path, save = False, save_dir = "data", sep = "\\"):
+def Save_win(data,loc_df, save_dir, patient_id,session_id, save = False):
+
+    for i, win in enumerate(data):
+        sdir = f"{save_dir}\\{patient_id}\\{patient_id}_{session_id}_w{i+1}.pt"
+        loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
+
+        if save:
+            torch.save(win,sdir)
+    return loc_df
+
+def Save_ch(data,loc_df, save_dir, patient_id,session_id, save = False):
+    
+    for i, win in enumerate(data):
+        for j, ch in enumerate(win):
+            sdir = f"{save_dir}\\{patient_id}\\{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
+            loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
+            
+            if save:
+                torch.save(ch,sdir)
+    return loc_df
+
+def prep(path, save = False,mode = "per_win", save_dir = "data", sep = "\\"):
     ''' 
     Lectura de todos los edfs de cada paciente, guardado de ventanas temporales y csv de direcciones
 
@@ -119,6 +144,7 @@ def prep(path, save = False, save_dir = "data", sep = "\\"):
     LEN_PAT = 8
     SESION_LEN = 15
     loc_df = pd.DataFrame(columns= ["Patient", "Session","N_Win", "Dir"], )
+    save_dir = save_dir + mode
 
     if save:
         if not os.path.exists(save_dir):
@@ -126,40 +152,41 @@ def prep(path, save = False, save_dir = "data", sep = "\\"):
             print("Data directory created :D")
     
 
-    patient_path = glob.glob(EDFDIR + '/**')
+    patient_path = glob.glob(path + '/**')
     for patient in patient_path:
 
         #Para guardar la id en el DF
         patient_id = patient[-LEN_PAT:]
+
+        if save:
+            if not os.path.exists(os.path.join(save_dir, patient_id)):
+                os.makedirs(os.path.join(save_dir, patient_id))
         
         sessions = glob.glob(patient + '/**')
         for session in sessions:
 
-                    
             #Para guardar la sesion correspondiente
             session_id = session[-SESION_LEN:-(SESION_LEN - 4)]
-
-            if save:
-                if not os.path.exists(save_dir + sep + session_id):
-                    os.makedirs(save_dir + sep + session_id)
 
             edfs = glob.glob(session+ "/**/*.edf")
             for edf in edfs:
 
                 raw = mne.io.read_raw_edf(edf,preload=True)
-                data = EDFprep(raw)
-                
-                for i in range(len(data)):
-                    sdir = f"{save_dir}{sep}{patient_id}{sep}{session_id}{sep}w{i+1}.pt"
-                    loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
-
-                    if save:
-                        torch.save(data[i],f"{save_dir}{sep}{session}{sep}{patient_id}_{session}_w{i+1}.pt")
+                try:
+                    data = EDFprep(raw,random = False)
+                except:
+                    print(f"{patient_id}_{session_id} failed")
+                    continue
+                if mode == "per_win":
+                    loc_df = Save_win(data,loc_df,save_dir,patient_id,session_id, save)
+                elif mode == "per_channel":
+                    loc_df = Save_ch(data,loc_df,save_dir,patient_id,session_id,save)
 
     if save:
-        pass
-        #Guardar df como csv
-
+        if mode == "per_channel":
+            loc_df.to_csv("prep_channels.csv", encoding= "utf-8" )
+        elif mode == "per_win":
+            loc_df.to_csv("prep_windows.csv", encoding= "utf-8")
                 
     return loc_df
 
