@@ -55,7 +55,7 @@ def temporal_crop(data, tin = 60, tfin = 12*60):
     croped = data_copy.crop(tmin = tin, tmax = min(tfin, int(data.times[-1])))
     return croped
 
-def get_epochs(data, channels, window = 20):
+def get_epochs(data, channels, window = 10):
     ''' 
     window es la ventana de tiempo
     '''
@@ -71,7 +71,7 @@ def get_epochs(data, channels, window = 20):
     epochs.drop(-1,reason = "Unfixed duration")
     return epochs
 
-def downsample(epoch, freq = 200):
+def downsample(epoch, freq = 100): # original 200
     ''' 
     Downsamples the data given by a factor
     En nuestro caso, down corresponde a (frecuencia que queremos)/(frecuencia actual)
@@ -114,7 +114,7 @@ def EDFprep(edf, n_channels = 19, norm = True, random = True, ):
 def Save_win(data,loc_df, save_dir, patient_id,session_id, save = False):
 
     for i, win in enumerate(data):
-        sdir = f"{save_dir}\\{patient_id}\\{patient_id}_{session_id}_w{i+1}.pt"
+        sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}.pt"
         loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
 
         if save:
@@ -125,7 +125,7 @@ def Save_ch(data,loc_df, save_dir, patient_id,session_id, save = False):
     
     for i, win in enumerate(data):
         for j, ch in enumerate(win):
-            sdir = f"{save_dir}\\{patient_id}\\{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
+            sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
             loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
             
             if save:
@@ -144,7 +144,7 @@ def prep(path, save = False,mode = "per_win", save_dir = "data", sep = "\\"):
     LEN_PAT = 8
     SESION_LEN = 15
     loc_df = pd.DataFrame(columns= ["Patient", "Session","N_Win", "Dir"], )
-    save_dir = save_dir + mode
+    save_dir = os.path.join(save_dir, mode)
 
     if save:
         if not os.path.exists(save_dir):
@@ -226,3 +226,4 @@ def EDFplot(edf_path, vs_prep = False, win_s = 20, f_prep = 200,n_epoch = 0 ):
         axes.set_ylabel("uVoltage [Vs]")
         axes.set_xlabel("Samples [s*Hz]")
     plt.show()
+

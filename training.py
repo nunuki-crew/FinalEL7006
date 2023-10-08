@@ -16,13 +16,17 @@ Pretext
 """
 def preloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     x1, x2 = batch
-    x1 = x1.reshape((x1.shape[0],1,-1)).type(torch.FloatTensor)
-    x2 = x2.reshape((x2.shape[0],1,-1)).type(torch.FloatTensor)
+    x1 = x1.reshape((x1.shape[0],1,-1))#.type(torch.FloatTensor)
+    x2 = x2.reshape((x2.shape[0],1,-1))#.type(torch.FloatTensor)
     model = model.to(device)
     x1, x2 = x1.to(device), x2.to(device)
     y1, y2 = model(x1), model(x2)
+#     print(y1)
+    #
     del x1, x2
     loss = criterion(y1, y2)
+    del y1, y2
+    torch.cuda.empty_cache()
     return loss
 
 def prevalidate(model, val_loader,criterion, augmentation):
@@ -34,6 +38,9 @@ def prevalidate(model, val_loader,criterion, augmentation):
             aug_batch = augmentation(batch.squeeze())
             loss= preloss(model, aug_batch, criterion)
             e_loss +=loss
+            #
+            del loss, batch
+            torch.cuda.empty_cache()
         e_loss = e_loss/(len(val_loader))
     return e_loss
 
@@ -43,7 +50,10 @@ def pretrain_epoch(model, train_loader, criterion, optimizer, augmentation):
     lossSum = 0
     iters = 0
     for i, batch in enumerate(train_loader):
+#         print(batch.dtype)
         aug_batch = augmentation(batch.squeeze())
+#         print(aug_batch[0].dtype)
+#         print(aug_batch[0][0])
         loss = preloss(model, aug_batch, criterion)
         #
         optimizer.zero_grad()
@@ -52,6 +62,10 @@ def pretrain_epoch(model, train_loader, criterion, optimizer, augmentation):
         print(f"Iter: {i + 1}/{len(train_loader)}, Loss:{loss}")
         lossSum += loss
         iters += 1
+        #
+        del batch
+        del loss
+        torch.cuda.empty_cache()
     trainloss = lossSum/iters
     # print(f"Epoch train loss = {trainloss}")
     return trainloss
@@ -78,7 +92,7 @@ def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer,
         train_loss = pretrain_epoch(model, train_loader, criterion, optimizer, augmentation)
         # Val
         val_loss = prevalidate(model, val_loader,criterion, augmentation)
-        # Save if better loss [MODIFICAR QUE SEA RESPECTO A VAL]
+        # Save if better loss 
         print(f"Train loss = {train_loss}, Val loss = {val_loss}")
 
         if (best_loss>train_loss):
@@ -109,7 +123,7 @@ def downloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     x, y = batch
     model.train()
     model = model.to(device)
-    x = x.reshape(x.shape[0], 1, 4000).type(torch.FloatTensor)
+    x = x.reshape(x.shape[0], 1, -1).type(torch.FloatTensor)
     x, y = x.to(device), y.to(device)
     y_pred = model(x)
     y_pred = (torch.argmax(y_pred, dim = 1)).type(torch.FloatTensor).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]

@@ -30,7 +30,7 @@ class CustomEEGDataset(Dataset):
         for i in idx:
             eeg_file = os.path.join(self.root_dir,
                                 self.loc_df.iloc[i, 3])
-            eeg = torch.from_numpy(torch.load(eeg_file)) # [0][0]
+            eeg = torch.from_numpy(torch.load(eeg_file)).type(torch.FloatTensor) # [0][0]
 
             if self.multi:
                 eeg= eeg.unsqueeze(0)
@@ -197,8 +197,8 @@ class Augmentations(nn.Module):
 
         for channel in batch:
 
-            rbar_idxs = np.random.choice(np.arange(0,len(self.augmentations),1),size=self.n_aug, replace= False)
-            rhat_idxs = np.random.choice(np.arange(0,len(self.augmentations),1),size=self.n_aug, replace= False)
+            rbar_idxs = np.sort(np.random.choice(np.arange(0,len(self.augmentations),1),size=self.n_aug, replace= False))
+            rhat_idxs = np.sort(np.random.choice(np.arange(0,len(self.augmentations),1),size=self.n_aug, replace= False))
 
             xbar = channel
             xhat = channel
@@ -208,8 +208,8 @@ class Augmentations(nn.Module):
             for j in rhat_idxs:
                 xhat = self.augmentations[j](xhat)
                 # print(self.augmentations[j])
-            xbar_batch.append(torch.from_numpy(xbar.copy()))
-            xhat_batch.append(torch.from_numpy(xhat.copy()))
+            xbar_batch.append(torch.from_numpy(xbar.copy()).type(torch.FloatTensor))
+            xhat_batch.append(torch.from_numpy(xhat.copy()).type(torch.FloatTensor))
         
         xbar_batch = torch.vstack(xbar_batch)
         xhat_batch = torch.vstack(xhat_batch)
