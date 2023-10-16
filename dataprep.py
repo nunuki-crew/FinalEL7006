@@ -204,7 +204,7 @@ def EDFplot(edf_path, vs_prep = False, win_s = 20, f_prep = 200,n_epoch = 0 ):
 
     n_axes = 1 + vs_prep * 1
 
-    fig, axes = plt.subplots(nrows = n_axes, figsize=(30, 15))
+    fig, axes = plt.subplots(nrows = n_axes, figsize=(30, 15), dpi =200)
 
     n_ep = n_epoch
     # first_win_original = first_channel[(60)*raw_freq:(60+win_s)*raw_freq]
@@ -213,16 +213,17 @@ def EDFplot(edf_path, vs_prep = False, win_s = 20, f_prep = 200,n_epoch = 0 ):
     if vs_prep:
         first_win_processed = np.squeeze(EDFprep(raw,n_channels = 1,norm = True, random = False)[n_ep])
         axes[0].plot(first_win_original, color = "black", label = names[0])
-        axes[0].set_title(f"{names[0]} edf")
+        axes[0].set_title(f"{names[0]} edf",fontsize = 20)
         axes[0].set_ylabel("uVoltage [Vs]")
 
         axes[1].plot(first_win_processed, color = "gray", label = names[1])
-        axes[1].set_title(f"{names[1]} edf")
+        axes[1].set_title(f"{names[1]} edf",fontsize = 20)
         axes[1].set_ylabel("uVoltage [Vs]")
         axes[1].set_xlabel("Samples [s*Hz]")
     else:
+        first_win_original = first_channel#[(60)*raw_freq:]
         axes.plot(first_win_original,color = "black", label = names[0])
-        axes.set_title(f"{names[0]} edf")
+        axes.set_title(f"{names[0]} edf",fontsize = 20)
         axes.set_ylabel("uVoltage [Vs]")
         axes.set_xlabel("Samples [s*Hz]")
     plt.show()
