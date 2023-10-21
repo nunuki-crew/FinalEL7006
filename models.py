@@ -28,8 +28,9 @@ class Permute(nn.Module):
 
 class Convolutional_Enc(nn.Module):
 
-    def __init__(self):
+    def __init__(self, out_size = 4):
         super(Convolutional_Enc, self).__init__()
+        self.out_size = out_size
         # Reflection pad
         # We begin with 3 convolutional blocks (top to bottom)
         self.conv1 = nn.Sequential(
@@ -62,7 +63,7 @@ class Convolutional_Enc(nn.Module):
             nn.ReLU(),
             nn.BatchNorm1d(num_features = 250),
             nn.ReflectionPad1d((31, 32)),
-            nn.Conv1d(in_channels = 250, out_channels = 4, kernel_size = 64),
+            nn.Conv1d(in_channels = 250, out_channels = self.out_size, kernel_size = 64),
         )
 
     def forward(self, x):
@@ -196,11 +197,22 @@ class Classifier(nn.Module):
 """
 Assembled structures
 """
+# Pretext Barlow Twins
+class Pretext_BT(nn.Module):
+    def __init__(self):
+        super(Pretext, self).__init__()
+        self.encoder = Convolutional_Enc(out_size = 100) 
+        # No projector!!!!!!
+        # self.projector = Projector()
+    def forward(self, x):
+        first = self.encoder(x)
+        end = self.projector(first)
+        return end
 # Pretext Task
 class Pretext(nn.Module):
     def __init__(self):
         super(Pretext, self).__init__()
-        self.encoder = Convolutional_Enc() 
+        self.encoder = Convolutional_Enc(out_size = 4) 
         self.projector = Projector()
     def forward(self, x):
         first = self.encoder(x)
