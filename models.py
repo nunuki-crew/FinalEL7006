@@ -199,14 +199,20 @@ Assembled structures
 """
 # Pretext Barlow Twins
 class Pretext_BT(nn.Module):
-    def __init__(self):
+    def __init__(self, out_size = 4, mlp = False):
         super(Pretext, self).__init__()
-        self.encoder = Convolutional_Enc(out_size = 100) 
-        # No projector!!!!!!
-        # self.projector = Projector()
+        self.out_size = out_size
+        self.mlp = mlp
+        self.encoder = Convolutional_Enc(out_size = self.out_size) 
+        self.linear = nn.Sequential(
+            nn.Linear(in_features = self.out_size, out_features = self.out_size),
+            # nn.ReLU(),
+        )
     def forward(self, x):
         first = self.encoder(x)
-        end = self.projector(first)
+        if self.mlp:
+            first = self.linear(first)
+        end = torch.flatten(first, start_dim = 1)
         return end
 # Pretext Task
 class Pretext(nn.Module):
@@ -223,7 +229,7 @@ class Pretext(nn.Module):
 class Downstream(nn.Module):
     def __init__(self):
         super(Downstream, self).__init__()
-        self.encoder = Convolutional_Enc() 
+        self.encoder = Convolutional_Enc(out_size = 4) 
         self.classify = Classifier()
         # Freeze encoder parameters
         for params in self.encoder.parameters():
