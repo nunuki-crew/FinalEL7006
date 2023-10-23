@@ -69,7 +69,7 @@ class Convolutional_Enc(nn.Module):
         )
 
     def forward(self, x):
-        # Pass trough convolutionals
+        # Pass through convolutionals
         xc1 = self.conv1(x)
         xc2 = self.conv2(x)
         xc3 = self.conv3(x)

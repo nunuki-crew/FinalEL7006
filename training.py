@@ -137,12 +137,12 @@ def downloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     print(loss)
     return loss, y, y_pred
 
-def downtrain_epoch(model, train_dataset, criterion, optimizer):
+def downtrain_epoch(model, train_dataset, criterion, optimizer, device = "cuda"):
     acc = 0
     e_loss = 0
     count = 0
     for i, batch in enumerate(train_dataset):
-        loss, y, y_pred = downloss(model, batch, criterion)
+        loss, y, y_pred = downloss(model, batch, criterion, device)
 
         optimizer.zero_grad()
         loss.requires_grad = True
