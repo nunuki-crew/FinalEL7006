@@ -9,11 +9,6 @@ import numpy as np
 import torch
 from torch import nn
 
-# Models
-"""
-Convolutional Encoder 
-"""
-
 # Aux nn.Module
 class Permute(nn.Module):
     def __init__(self, a, b, c):
@@ -25,6 +20,13 @@ class Permute(nn.Module):
         return x.permute(self.a , self.b, self.c)
     
 ##################################################
+
+# Models
+# SINGLE CHANNEL MODEL
+"""
+Convolutional Encoder 
+"""
+
 
 class Convolutional_Enc(nn.Module):
 
@@ -200,20 +202,23 @@ Assembled structures
 # Pretext Barlow Twins
 class Pretext_BT(nn.Module):
     def __init__(self, out_size = 4, mlp = False):
-        super(Pretext, self).__init__()
+        super(Pretext_BT, self).__init__()
         self.out_size = out_size
         self.mlp = mlp
         self.encoder = Convolutional_Enc(out_size = self.out_size) 
         self.linear = nn.Sequential(
-            nn.Linear(in_features = self.out_size, out_features = self.out_size),
+            nn.Linear(in_features = 1000*self.out_size, out_features = 1000*self.out_size),
             # nn.ReLU(),
         )
     def forward(self, x):
         first = self.encoder(x)
+        # print(first.shape)
+        first = torch.flatten(first, start_dim = 1)
+        # print(first.shape)
         if self.mlp:
             first = self.linear(first)
-        end = torch.flatten(first, start_dim = 1)
-        return end
+        # print(first.shape)
+        return first
 # Pretext Task
 class Pretext(nn.Module):
     def __init__(self):
@@ -238,3 +243,5 @@ class Downstream(nn.Module):
         first = self.encoder(x)
         end = self.classify(first)
         return end
+    
+# MULTIPLE CHANNELS MODEL

@@ -70,9 +70,9 @@ class IsoLoss(torch.nn.Module):
     
 class BarlowTwins(torch.nn.Module):
 
-    def __init__(self, _conf):
+    def __init__(self, lda=0.1):
         super().__init__()
-        self._lambda = 0.1
+        self._lambda = lda
 
     @staticmethod
     def off_diagonal(x):

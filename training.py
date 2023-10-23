@@ -9,6 +9,7 @@ import numpy as np
 import torch
 from torch import nn
 from losses import InfoNceLoss
+from losses import BarlowTwins
 
 
 """
@@ -44,9 +45,10 @@ def prevalidate(model, val_loader,criterion, augmentation):
         e_loss = e_loss/(len(val_loader))
     return e_loss
 
-def pretrain_epoch(model, train_loader, criterion, optimizer, augmentation):
+def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer, augmentation):
     # training mode
     model.train()
+    vloss = []
     lossSum = 0
     iters = 0
     for i, batch in enumerate(train_loader):
@@ -66,11 +68,15 @@ def pretrain_epoch(model, train_loader, criterion, optimizer, augmentation):
         del batch
         del loss
         torch.cuda.empty_cache()
+        if ((i+1)%30 == 0):
+            val_loss = prevalidate(model, val_loader, criterion, augmentation)
+            print(f"Validating, Val loss = {val_loss}")
+            vloss.append(val_loss)
     trainloss = lossSum/iters
     # print(f"Epoch train loss = {trainloss}")
-    return trainloss
+    return trainloss, vloss
 
-def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer, augmentation, each = 50, state = None):
+def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer, augmentation, each = 50, state = None, name = ""):
     # If trained before
     if state == None:
         state = {
@@ -89,30 +95,29 @@ def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer,
     for epoch in range(state_epochs, state_epochs + epochs):
         print(f"Epoch nro {epoch + 1}/{epochs}")
         # Train
-        train_loss = pretrain_epoch(model, train_loader, criterion, optimizer, augmentation)
+        train_loss, vloss = pretrain_epoch(model, train_loader, val_loader, criterion, optimizer, augmentation)
         # Val
-        val_loss = prevalidate(model, val_loader,criterion, augmentation)
+        val_loss = prevalidate(model, val_loader, criterion, augmentation)
+        vloss.append(val_loss)
         # Save if better loss 
         print(f"Train loss = {train_loss}, Val loss = {val_loss}")
 
-        if (best_loss>train_loss):
-            best_loss = train_loss
+        if (best_loss>val_loss):
+            best_loss = val_loss
             print(f"Better params found in epoch = {epoch + 1}, saved params")
-            torch.save(model.state_dict(), f'bestEncoderParams.pt')
-        # Load best model so far to proceed
-        # model.load_state_dict(torch.load(f'bestEncoderParams.pt'))
+            torch.save(model.state_dict(), f'bestEncoderParams{name}.pt')
         # Save periodically for each
         if ((epoch + 1)%each == 0):
-            print(f"Se ha guardado la época múltiplo de {each}")
-            torch.save(model.state_dict(), f'eachEncoderParams_{epoch + 1}.pt')
+            print(f"Saved epoch multiple of {each}")
+            torch.save(model.state_dict(), f'eachEncoderParams{name}_{epoch + 1}.pt')
         # Update state
         state["loss"][0].append(train_loss)
-        state["loss"][1].append(val_loss)
+        state["loss"][1]+=vloss
         state["epoch"] = epoch + 1
         state["params"] = model.state_dict()
         state["bestloss"] = best_loss
         # Save last just in case, [includes loss!!!!]
-        torch.save(state, f"Lastencoder_{epoch + 1}.pt")
+        torch.save(state, f"Lastencoder{name}_{epoch + 1}.pt")
     return state["loss"]    
 
 """
@@ -168,7 +173,7 @@ def downvalidate(model, val_dataset, criterion):
         e_loss = e_loss/count
     return e_loss, acc
 
-def downtrain(model, epochs, train_dataset, val_dataset, criterion, optimizer, each = 50, state = None):
+def downtrain(model, epochs, train_dataset, val_dataset, criterion, optimizer, each = 50, state = None, name = ""):
     # If trained before
     if state == None:
         state = {
@@ -195,13 +200,13 @@ def downtrain(model, epochs, train_dataset, val_dataset, criterion, optimizer, e
         if val_loss < best_loss:
             best_loss = val_loss
             print(f"Better params found in epoch = {epoch + 1}, saved params")
-            torch.save(model.state_dict(), f'bestDownParams.pt')
+            torch.save(model.state_dict(), f'bestDownParams{name}.pt')
         # Load best model so far to proceed
         # model.load_state_dict(torch.load(f'bestDownParams.pt'))
         # Save periodically for each
         if ((epoch + 1)%each == 0):
             print(f"Se ha guardado la época múltiplo de {each}")
-            torch.save(model.state_dict(), f'eachDownParams_{epoch + 1}.pt')
+            torch.save(model.state_dict(), f'eachDownParams{name}_{epoch + 1}.pt')
         # Update state
         state["loss"][0].append(e_loss)
         state["loss"][1].append(val_loss)
@@ -211,5 +216,5 @@ def downtrain(model, epochs, train_dataset, val_dataset, criterion, optimizer, e
         state["params"] = model.state_dict()
         state["bestloss"] = best_loss
         # Save last just in case, [includes loss!!!!]
-        torch.save(state, f"LastDown_{epoch + 1}.pt")
-        return state["loss"], state["acc"]  
+        torch.save(state, f"LastDown{name}_{epoch + 1}.pt")
+        return state["loss"], state["acc"]
