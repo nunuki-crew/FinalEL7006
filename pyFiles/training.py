@@ -76,7 +76,7 @@ def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer):
             print(f"Validating, Val loss = {val_loss}")
             vloss.append(val_loss)
             tloss.append(lossSum/iters)
-    tloss = lossSum/iters
+    tloss.append(lossSum/iters)
     # print(f"Epoch train loss = {trainloss}")
     return tloss, vloss
 
