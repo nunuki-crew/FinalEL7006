@@ -70,10 +70,10 @@ class IsoLoss(torch.nn.Module):
     
 class BarlowTwins(torch.nn.Module):
 
-    def __init__(self, lda=0.1):
+    def __init__(self, lda=0.1, noise = False):
         super().__init__()
         self._lambda = lda
-
+        self.noise = noise
     @staticmethod
     def off_diagonal(x):
         """_summary_
@@ -105,7 +105,11 @@ class BarlowTwins(torch.nn.Module):
 
         on_diag = torch.diagonal(corr).add_(-1).pow_(2).sum()
         
-        off_diag = self.off_diagonal(corr).pow_(2).sum()
+        if self.noise:
+            noise = torch.randn(1)
+            off_diag = self.off_diagonal(corr).add_(noise).pow_(2).sum()
+        else:
+            off_diag = self.off_diagonal(corr).pow_(2).sum()
 
         loss = on_diag + self._lambda * off_diag
         
