@@ -4,10 +4,11 @@ Ammi Beltrán y Fernanda Borja
 """
 # Import libraries
 import os
-import dataprep as prep
-import numpy as np
 import torch
+import numpy as np
 from torch import nn
+import dataprep as prep
+import torch.nn.functional as F
 
 # Aux nn.Module
 class Permute(nn.Module):
@@ -245,3 +246,37 @@ class Downstream(nn.Module):
         return end
     
 # MULTIPLE CHANNELS MODEL
+class StagerNet(nn.Module):
+    def __init__(self, channels, dropout_rate=0.5, embed_dim=100):
+        super(StagerNet, self).__init__()
+        self.conv1 = nn.Conv2d(1, channels, (1, channels), stride=(1, 1))
+        self.conv2 = nn.Conv2d(1, 16, (50, 1), stride=(1, 1))
+        self.conv3 = nn.Conv2d(16, 16, (50, 1), stride=(1, 1))
+        self.linear1 = nn.Linear(208*channels, embed_dim)
+        self.batchnorm1 = nn.BatchNorm2d(16)
+        self.batchnorm2 = nn.BatchNorm2d(16)
+
+        self.dropout_rate = dropout_rate
+        self.embed_dim = embed_dim
+    
+    def forward(self, x):
+        # input  (C,T)
+        x = torch.unsqueeze(x, 1)
+
+        # convolve x with C filters to 1 by T by C
+        x = self.conv1(x)
+        # permute to (C, T, I)
+        x = x.permute(0, 3, 2, 1)
+
+        x = self.conv2(x)
+        x = F.relu(F.max_pool2d(x, (13, 1)))
+        x = self.batchnorm1(x)
+        x = self.conv3(x)
+        x = F.relu(F.max_pool2d(x, (13, 1)))
+        x = self.batchnorm2(x)
+
+        x = torch.flatten(x, 1) # flatten all but batch dim
+        x = F.dropout(x, p=self.dropout_rate)
+        x = self.linear1(x)
+        return x
+
