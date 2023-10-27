@@ -71,8 +71,9 @@ def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer):
         del batch
         del loss
         torch.cuda.empty_cache()
-        if ((i+1)%30 == 0):
+        if ((i+1)%5 == 0):
             val_loss = prevalidate(model, val_loader, criterion)
+            model.train()
             print(f"Validating, Val loss = {val_loss}")
             vloss.append(val_loss)
             tloss.append(lossSum/iters)
