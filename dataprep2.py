@@ -30,7 +30,8 @@ class CustomEEGDataset(Dataset):
         for i in idx:
             eeg_file = os.path.join(self.root_dir,
                                 self.loc_df.iloc[i, 3])
-            eeg = torch.from_numpy(torch.load(eeg_file)).type(torch.FloatTensor) # [0][0]
+            # eeg = torch.from_numpy(torch.load(eeg_file)).type(torch.FloatTensor) # [0][0]
+            eeg = torch.load(eeg_file)
 
             if self.multi:
                 eeg= eeg.unsqueeze(0)

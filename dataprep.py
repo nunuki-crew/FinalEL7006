@@ -16,6 +16,7 @@ import copy
 import pandas as pd
 
 import torch 
+from dataprep2 import Masking
 # FOR TESTING
 # EDFDIR = "D:\\OneDrive\\OneDrive - Universidad de Chile\\Semestre X\\Inteligencia\\Proyecto\\dataset\\tuh_eeg"
 EDFDIR = "c:\\Users\\TheSy\\Desktop\\tuh_eeg"
@@ -35,7 +36,7 @@ def clip(data, channels,max= 500e-6):
         return array
     data.apply_function(cliper, picks=channels, channel_wise= True)
 
-def eeg_filter(data, lfreq = 0.1, hfreq= 30):
+def eeg_filter(data, lfreq = 1, hfreq= 70):
     '''
     
     '''
@@ -43,6 +44,11 @@ def eeg_filter(data, lfreq = 0.1, hfreq= 30):
     filtered = data_copy.filter(#l_freq = lfreq,
                                 l_freq = lfreq,
                                 h_freq = hfreq,
+                                method = "iir",
+                                )
+    filtered = filtered.filter(#l_freq = lfreq,
+                                l_freq = 61,
+                                h_freq = 59,
                                 method = "iir",
                                 )
     return filtered
@@ -97,18 +103,17 @@ def EDFprep(edf, n_channels = 19, norm = True, random = True, ):
         ch = channels[:n_channels]
     
     channel_data = channel_select(edf, ch)
-    clip(channel_data,ch)
-    if(int(edf.times[-1]) < 100):
-        return np.empty(0)
     filtered = eeg_filter(channel_data)
+    clip(filtered, ch)
     trimmed_data = temporal_crop(filtered)
-    down_data = downsample(trimmed_data)
-    epochs = get_epochs(down_data, ch)
+    re_ref = trimmed_data.copy().set_eeg_reference(ref_channels="average")
+    down_data = downsample(re_ref)
+    epochs = get_epochs(down_data,down_data.ch_names)
+
     if norm:
         norm_data = normalization(epochs)
         norm_data = np.delete(norm_data,-1,2)
-        return norm_data
-    epochs = np.delete(epochs,-1,2)    
+        return norm_data 
     return epochs
 
 def Save_win(data,loc_df, save_dir, patient_id,session_id, save = False):
@@ -125,11 +130,14 @@ def Save_ch(data,loc_df, save_dir, patient_id,session_id, save = False):
     
     for i, win in enumerate(data):
         for j, ch in enumerate(win):
-            sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
+            sdir = f"{save_dir}\\{patient_id}\\{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
             loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
             
             if save:
-                torch.save(ch,sdir)
+                cht = Masking(ch)
+                chtp = Masking(ch)
+                ch_save = torch.from_numpy(np.vstack([cht,chtp])).type(torch.FloatTensor)
+                torch.save(ch_save , sdir)
     return loc_df
 
 def prep(path, save = False,mode = "per_win", save_dir = "data", sep = "\\"):
