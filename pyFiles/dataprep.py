@@ -16,7 +16,7 @@ import copy
 import pandas as pd
 
 import torch 
-from pyFiles.dataprep2 import Masking
+# from pyFiles.dataprep2 import Masking
 # FOR TESTING
 # EDFDIR = "D:\\OneDrive\\OneDrive - Universidad de Chile\\Semestre X\\Inteligencia\\Proyecto\\dataset\\tuh_eeg"
 EDFDIR = "c:\\Users\\TheSy\\Desktop\\tuh_eeg"
@@ -134,9 +134,11 @@ def Save_ch(data,loc_df, save_dir, patient_id,session_id, save = False):
             loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
             
             if save:
-                cht = Masking(ch)
-                chtp = Masking(ch)
-                ch_save = torch.from_numpy(np.vstack([cht,chtp])).type(torch.FloatTensor)
+                # cht = Masking(ch)
+                # chtp = Masking(ch)
+                # ch_save = torch.from_numpy(np.vstack([cht,chtp])).type(torch.FloatTensor)
+                ch_save = torch.from_numpy(ch).type(torch.FloatTensor)
+                ch_save = ch_save.unsqueeze(dim = 0)
                 torch.save(ch_save , sdir)
     return loc_df
 

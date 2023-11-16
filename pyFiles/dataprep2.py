@@ -21,27 +21,17 @@ class CustomEEGDataset(Dataset):
         return len(self.loc_df)
         
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-        if type(idx) == int:
-            idx = [idx]
 
-        batch = []   
-        for i in idx:
-            eeg_file = os.path.join(self.root_dir,
-                                self.loc_df.iloc[i, 3])
-            # eeg = torch.from_numpy(torch.load(eeg_file)).type(torch.FloatTensor) # [0][0]
-            eeg = torch.load(eeg_file)
-
-            if self.multi:
-                eeg= eeg.unsqueeze(0)
-            batch.append(eeg) 
-        bat = torch.vstack(batch)
+        eeg_file = os.path.join(self.root_dir,
+                                self.loc_df.iloc[idx, 3])
+        eeg = torch.load(eeg_file)
             
         if self.transform is not None:
-            bat = self.transform(bat)
+            ch1 = self.transform(eeg)
+            ch2 = self.transform(eeg)
+            return ch1, ch2
 
-        return bat
+        return eeg, eeg
     
 class DFSpliter():
     def __init__(self, train_size= 0.8, val_size = 0.2, save = False, seed = 69) -> None:
@@ -190,29 +180,10 @@ class Augmentations(nn.Module):
         self.multi = multi
         self.augmentations = augmentations
 
-    def __call__(self,batch):
-        xbar_batch = []
-        xhat_batch = []
+    def __call__(self, channel):
 
-        batch = batch.numpy()
+        aug_batch = channel
+        for i in range(self.n_aug):
+            aug_batch = self.augmentations[i](aug_batch)
 
-        for channel in batch:
-
-            rbar_idxs = np.sort(np.random.choice(np.arange(0,len(self.augmentations),1),size=self.n_aug, replace= False))
-            rhat_idxs = np.sort(np.random.choice(np.arange(0,len(self.augmentations),1),size=self.n_aug, replace= False))
-
-            xbar = channel
-            xhat = channel
-            for i in rbar_idxs:
-                xbar = self.augmentations[i](xbar)
-                # print(self.augmentations[i])
-            for j in rhat_idxs:
-                xhat = self.augmentations[j](xhat)
-                # print(self.augmentations[j])
-            xbar_batch.append(torch.from_numpy(xbar.copy()).type(torch.FloatTensor))
-            xhat_batch.append(torch.from_numpy(xhat.copy()).type(torch.FloatTensor))
-        
-        xbar_batch = torch.vstack(xbar_batch)
-        xhat_batch = torch.vstack(xhat_batch)
-
-        return xbar_batch,xhat_batch
+        return aug_batch
