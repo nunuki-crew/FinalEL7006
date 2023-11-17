@@ -16,16 +16,12 @@ from pyFiles.losses import BarlowTwins
 Pretext
 """
 def preloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
-    # print(batch.shape)
-    x1, x2 = batch[:, 0:1, :], batch[:, 1:2, :]
-    # print(x1.shape)
-    # x1 = x1.reshape((x1.shape[0],1,-1))#.type(torch.FloatTensor)
-    # x2 = x2.reshape((x2.shape[0],1,-1))#.type(torch.FloatTensor)
+    x1, x2 = batch
+    # 
     model = model.to(device)
     x1, x2 = x1.to(device), x2.to(device)
     y1, y2 = model(x1), model(x2)
-#     print(y1)
-    #
+    # 
     del x1, x2
     loss = criterion(y1, y2)
     del y1, y2
@@ -33,12 +29,10 @@ def preloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     return loss
 
 def prevalidate(model, val_loader,criterion):
-    
     e_loss = 0
     model.eval()
     with torch.no_grad():
         for i, batch in enumerate(val_loader):
-            # aug_batch = augmentation(batch.squeeze())
             loss= preloss(model, batch, criterion)
             e_loss +=loss
             #
@@ -55,10 +49,6 @@ def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer):
     lossSum = 0
     iters = 0
     for i, batch in enumerate(train_loader):
-#         print(batch.dtype)
-        # aug_batch = augmentation(batch.squeeze())
-#         print(aug_batch[0].dtype)
-#         print(aug_batch[0][0])
         loss = preloss(model, batch, criterion)
         #
         optimizer.zero_grad()
@@ -78,7 +68,6 @@ def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer):
             vloss.append(val_loss)
             tloss.append(lossSum/iters)
     tloss.append(lossSum/iters)
-    # print(f"Epoch train loss = {trainloss}")
     return tloss, vloss
 
 def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer, each = 50, state = None, name = ""):
