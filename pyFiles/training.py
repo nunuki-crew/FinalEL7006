@@ -41,7 +41,7 @@ def prevalidate(model, val_loader, criterion):
         e_loss = e_loss/(len(val_loader))
     return e_loss
 
-def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer):
+def pretrain_epoch(model, train_loader, criterion, optimizer):
     # training mode
     model.train()
     # vloss = []
@@ -88,7 +88,7 @@ def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer,
     for epoch in range(state_epochs, state_epochs + epochs):
         print(f"Epoch nro {epoch + 1}/{epochs}")
         # Train
-        train_loss = pretrain_epoch(model, train_loader, val_loader, criterion, optimizer)
+        train_loss = pretrain_epoch(model, train_loader, criterion, optimizer)
         # Val
         val_loss = prevalidate(model, val_loader, criterion)
         # Save if better loss 
