@@ -28,7 +28,7 @@ def preloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     torch.cuda.empty_cache()
     return loss
 
-def prevalidate(model, val_loader,criterion):
+def prevalidate(model, val_loader, criterion):
     e_loss = 0
     model.eval()
     with torch.no_grad():
@@ -44,10 +44,10 @@ def prevalidate(model, val_loader,criterion):
 def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer):
     # training mode
     model.train()
-    vloss = []
-    tloss = []
+    # vloss = []
+    # tloss = []
     lossSum = 0
-    iters = 0
+    # iters = 0
     for i, batch in enumerate(train_loader):
         loss = preloss(model, batch, criterion)
         #
@@ -56,21 +56,20 @@ def pretrain_epoch(model, train_loader, val_loader, criterion, optimizer):
         optimizer.step()
         print(f"Iter: {i + 1}/{len(train_loader)}, Loss:{loss}")
         lossSum += loss
-        iters += 1
+        # iters += 1
         #
-        del batch
-        del loss
+        del batch, loss
         torch.cuda.empty_cache()
-        if ((i+1)%5 == 0):
-            val_loss = prevalidate(model, val_loader, criterion)
-            model.train()
-            print(f"Validating, Val loss = {val_loss}")
-            vloss.append(val_loss)
-            tloss.append(lossSum/iters)
-    tloss.append(lossSum/iters)
-    return tloss, vloss
+        # if ((i+1)%5 == 0):
+        #     val_loss = prevalidate(model, val_loader, criterion)
+        #     model.train()
+        #     print(f"Validating, Val loss = {val_loss}")
+        #     vloss.append(val_loss)
+        #     tloss.append(lossSum/iters)
+    tloss = lossSum/len(train_loader)
+    return tloss#, vloss
 
-def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer, each = 50, state = None, name = ""):
+def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer, state = None, name = ""):
     # If trained before
     if state == None:
         state = {
@@ -89,24 +88,19 @@ def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer,
     for epoch in range(state_epochs, state_epochs + epochs):
         print(f"Epoch nro {epoch + 1}/{epochs}")
         # Train
-        train_loss, vloss = pretrain_epoch(model, train_loader, val_loader, criterion, optimizer)
+        train_loss = pretrain_epoch(model, train_loader, val_loader, criterion, optimizer)
         # Val
         val_loss = prevalidate(model, val_loader, criterion)
-        vloss.append(val_loss)
         # Save if better loss 
-        print(f"Train loss = {train_loss[-1]}, Val loss = {val_loss}")
+        print(f"Train loss = {train_loss}, Val loss = {val_loss}")
 
         if (best_loss>val_loss):
             best_loss = val_loss
             print(f"Better params found in epoch = {epoch + 1}, saved params")
             torch.save(model.state_dict(), f'bestEncoderParams{name}.pt')
-        # Save periodically for each
-        if ((epoch + 1)%each == 0):
-            print(f"Saved epoch multiple of {each}")
-            torch.save(model.state_dict(), f'eachEncoderParams{name}_{epoch + 1}.pt')
         # Update state
-        state["loss"][0]+=(train_loss)
-        state["loss"][1]+=vloss
+        state["loss"][0].append(train_loss)
+        state["loss"][1].append(val_loss)
         state["epoch"] = epoch + 1
         state["params"] = model.state_dict()
         state["bestloss"] = best_loss
