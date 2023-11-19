@@ -72,7 +72,7 @@ class DFSpliter():
         print("CSVs creados")
         return train_df,val_df
     
-def Masking(channel: torch.Tensor, window: int= 300):
+def Masking(channel: torch.Tensor, window: int= 250):
     '''
     Set to zero 
     Input: \\
@@ -111,7 +111,7 @@ def DCVoltage(channel : torch.Tensor, max_magnitude: float = 0.5):
     # print(f"total time = {et - st} s")
     return channel      
 
-def GaussianNoise(channel: torch.Tensor, std: float = 10):
+def GaussianNoise(channel: torch.Tensor, std: float = 0.2):
     '''
     Add Gaussian Noise with zero mean and std deviation
     Input:  -channel = Numpy array
@@ -127,7 +127,7 @@ def GaussianNoise(channel: torch.Tensor, std: float = 10):
 #     print(f"total time = {et - st} s")
     return noisy_channel
 
-def Time_Shift(channel: torch.Tensor, min_shift: int = 0, max_shift: int = 50):
+def Time_Shift(channel: torch.Tensor, min_shift: int = -50, max_shift: int = 50):
     # st = time.time()
     shift = int(torch.randint(low = min_shift, high = max_shift, size = (1, ))/2)
     shift_ch = F.pad(channel.unsqueeze(2), (0, 0, shift, -shift), mode = "reflect").squeeze(2)
@@ -136,10 +136,10 @@ def Time_Shift(channel: torch.Tensor, min_shift: int = 0, max_shift: int = 50):
     # print(f"total time = {et - st} s")
     return shift_ch
 
-def Amplitude(channel: torch.Tensor, max_amp: float = 1.5):
+def Amplitude(channel: torch.Tensor,min_amp:float = 0.5, max_amp: float = 2):
     # st = time.time()
     size = channel.size()
-    factors = (torch.rand(size[0])*2 - 1)*max_amp
+    factors = (torch.rand(size[0])*(min_amp -max_amp)) + max_amp
     factors = factors.view(-1, 1)
     channel = torch.mul(channel, factors)
     # et = time.time()
