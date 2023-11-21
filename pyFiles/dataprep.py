@@ -122,15 +122,16 @@ def Save_win(data,loc_df, save_dir, patient_id,session_id, save = False):
         sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}.pt"
         loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
 
+        win_save = torch.from_numpy(win).type(torch.FloatTensor)
         if save:
-            torch.save(win,sdir)
+            torch.save(win_save,sdir)
     return loc_df
 
 def Save_ch(data,loc_df, save_dir, patient_id,session_id, save = False):
     
     for i, win in enumerate(data):
         for j, ch in enumerate(win):
-            sdir = f"{save_dir}\\{patient_id}\\{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
+            sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
             loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
             
             if save:
