@@ -85,7 +85,7 @@ def Masking(channel: torch.Tensor, window: int= 250):
     size = channel.size()
     mask = torch.ones(size)
     for i in range(size[0]):
-        lenght = torch.randint(0, window, (1,))
+        lenght = torch.randint(0, window, (1,)).item()
         start = torch.randint(0, size[1] - lenght + 1, (1,))
         mask[i, start:(start + lenght)] = 0
     masked = channel * mask

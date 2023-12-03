@@ -81,7 +81,8 @@ def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer,
     # If previously trained
     else:
         state = torch.load(state)
-        model.load_state_dict(state["params"])
+        model.encoder.load_state_dict(state["params"][0])
+        model.final.load_state_dict(state["params"][1])
 
     best_loss = state["bestloss"]
     state_epochs = state["epoch"]
@@ -97,12 +98,12 @@ def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer,
         if (best_loss>val_loss):
             best_loss = val_loss
             print(f"Better params found in epoch = {epoch + 1}, saved params")
-            torch.save(model.state_dict(), f'bestEncoderParams{name}.pt')
+            torch.save([model.encoder.state_dict(), model.final.state_dict()], f'bestEncoderParams{name}.pt')
         # Update state
-        state["loss"][0].append(train_loss)
-        state["loss"][1].append(val_loss)
+        state["loss"][0].append(train_loss.item())
+        state["loss"][1].append(val_loss.item())
         state["epoch"] = epoch + 1
-        state["params"] = model.state_dict()
+        state["params"] = [model.encoder.state_dict(), model.final.state_dict()]
         state["bestloss"] = best_loss
         # Save last just in case, [includes loss!!!!]
         torch.save(state, f"Lastencoder{name}_{epoch + 1}.pt")

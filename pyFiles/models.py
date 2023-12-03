@@ -9,6 +9,7 @@ import numpy as np
 from torch import nn
 import pyFiles.dataprep as prep
 import torch.nn.functional as F
+from braindecode.models import SleepStagerChambon2018
 
 # Aux nn.Module
 class Permute(nn.Module):
@@ -249,7 +250,7 @@ class Downstream(nn.Module):
 class StagerNet(nn.Module):
     def __init__(self, channels, dropout_rate=0.5, embed_dim=100):
         super(StagerNet, self).__init__()
-        self.conv1 = nn.Conv2d(1, channels, (1, channels), stride=(1, 1))
+        self.conv1 = nn.Conv2d(1, channels, (channels, 1), stride=(1, 1))
         self.conv2 = nn.Conv2d(1, 16, (50, 1), stride=(1, 1))
         self.conv3 = nn.Conv2d(16, 16, (50, 1), stride=(1, 1))
         self.linear1 = nn.Linear(208*channels, embed_dim)
@@ -261,14 +262,21 @@ class StagerNet(nn.Module):
     
     def forward(self, x):
         # input  (C,T)
+        print(x.shape)
         x = torch.unsqueeze(x, 1)
-
+        print(x.shape)
+        x = x.permute(0, 2, 1, 3)
+        print(x.shape)
+        # C,1,L
         # convolve x with C filters to 1 by T by C
         x = self.conv1(x)
+        print(x.shape)
         # permute to (C, T, I)
         x = x.permute(0, 3, 2, 1)
+        print(x.shape)
 
         x = self.conv2(x)
+        print(x.shape)
         x = F.relu(F.max_pool2d(x, (13, 1)))
         x = self.batchnorm1(x)
         x = self.conv3(x)
@@ -279,4 +287,49 @@ class StagerNet(nn.Module):
         x = F.dropout(x, p=self.dropout_rate)
         x = self.linear1(x)
         return x
-
+"""
+Sleep Stager
+"""
+class SleepStager(nn.Module):
+    def __init__(self, n_chans, pretext = True):
+        super(SleepStager, self).__init__()
+        # Parameters
+        self.n_chans = n_chans
+        # Encoder
+        self.encoder = SleepStagerChambon2018(
+                            n_chans = n_chans, 
+                            sfreq = 100, 
+                            n_conv_chs = 16, 
+                            time_conv_size_s = 0.5, 
+                            max_pool_size_s = 0.125, 
+                            pad_size_s = 0.25, 
+                            input_window_seconds = 10, 
+                            apply_batch_norm = False, 
+                            return_feats = True,)
+        # Obtain linear input size
+        self.emb_size = self.encoder.len_last_layer
+        self.out_size = (100 if self.emb_size > 1000 else int(self.emb_size/2)) 
+        if pretext:
+            # Projector
+            self.final = nn.Sequential(
+                                nn.Linear(self.emb_size, self.emb_size), 
+                                nn.Dropout(0.25),
+                                nn.Linear(self.emb_size, self.out_size),)
+        else:
+            # Classifier (Downstream)
+            self.final = nn.Sequential(
+                                nn.Linear(self.emb_size, self.emb_size), 
+                                nn.Dropout(0.25),
+                                nn.Linear(self.emb_size, self.out_size),
+                                nn.Linear(self.out_size, 2),) 
+            
+    def encode(self, data):
+        # Useful!
+        return self.encoder(data)
+    
+    def forward(self, data):
+        #
+        features = self.encoder(data)
+        # 
+        exit = self.final(features)
+        return exit

@@ -127,9 +127,9 @@ class VICReg(torch.nn.Module):
 
         self.variance_loss_epsilon = 1e-04
         
-        self.invariance_loss_weight = _conf['invariance_loss_weight']
-        self.variance_loss_weight = _conf['variance_loss_weight']
-        self.covariance_loss_weight = _conf['covariance_loss_weight']
+        self.invariance_loss_weight = 25
+        self.variance_loss_weight = 25
+        self.covariance_loss_weight = 1
 
     def forward(self, z_a, z_b):
         """_summary_
