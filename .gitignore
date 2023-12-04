@@ -161,3 +161,4 @@ cython_debug/
 dataper_channel/
 data/
 prep_channels.csv
+data_down

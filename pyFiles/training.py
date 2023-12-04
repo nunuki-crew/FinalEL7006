@@ -119,7 +119,7 @@ def downloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     model = model.to(device)
     x, y = x.to(device), y.to(device)
     y_pred = model(x)
-    y_pred = torch.argmax(y_pred, dim = 1).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
+    y_pred = torch.argmax(y_pred, dim = 1, keepdim= True).type(torch.FloatTensor).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
     loss = criterion(y_pred, y)
     return loss, y, y_pred
 
@@ -135,8 +135,9 @@ def downtrain_epoch(model, train_dataset, criterion, optimizer, device = "cuda")
         loss.backward()
         optimizer.step()
 
-        e_loss +=loss
-        acc +=(y == y_pred)
+        e_loss +=loss.item()
+    
+        acc += torch.sum(y == y_pred)
         count +=1
         print(f"Iter: {i + 1}/{len(train_dataset)}, Loss:{loss}")
     acc = acc/count
@@ -152,8 +153,8 @@ def downvalidate(model, val_dataset, criterion):
     with torch.no_grad():
         for i, batch in enumerate(val_dataset):
             loss, y, y_pred = downloss(model, batch, criterion)
-            e_loss +=loss
-            acc+=(y==y_pred)
+            e_loss +=loss.item()
+            acc+=torch.sum(y==y_pred)
             count +=1
         acc = acc/count
         e_loss = e_loss/count
