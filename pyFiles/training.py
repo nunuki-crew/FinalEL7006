@@ -117,13 +117,10 @@ def downloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     x, y = batch
     model.train()
     model = model.to(device)
-    x = x.reshape(x.shape[0], 1, -1).type(torch.FloatTensor)
     x, y = x.to(device), y.to(device)
     y_pred = model(x)
-    y_pred = (torch.argmax(y_pred, dim = 1)).type(torch.FloatTensor).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
-
+    y_pred = torch.argmax(y_pred, dim = 1).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
     loss = criterion(y_pred, y)
-    print(loss)
     return loss, y, y_pred
 
 def downtrain_epoch(model, train_dataset, criterion, optimizer, device = "cuda"):

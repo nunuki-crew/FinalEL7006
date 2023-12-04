@@ -143,28 +143,29 @@ def EDFprep(edf, n_channels = 19, norm = True, random = True, ):
         return norm_data 
     return epochs
 
-def Save_win(data,loc_df, save_dir, patient_id,session_id, save = False):
+def Save_win(data,loc_df, final_dir, patient_id,label, save = False):
 
     for i, win in enumerate(data):
-        sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}.pt"
-        loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
+        sdir = os.path.join(final_dir,f"{patient_id}_w{i+1}.pt")
+        loc_df.loc[len(loc_df)] = [patient_id,i+1,sdir]
 
         win_save = torch.from_numpy(win).type(torch.FloatTensor)
         if save:
-            torch.save(win_save,sdir)
+            torch.save((win_save, label),sdir)
     return loc_df
 
-def Save_ch(data,loc_df, save_dir, patient_id,session_id, save = False):
+def Save_ch(data,loc_df, final_dir, patient_id,label, save = False):
     
     for i, win in enumerate(data):
         for j, ch in enumerate(win):
-            sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
-            loc_df.loc[len(loc_df)] = [patient_id,session_id,i+1,sdir]
+            # sdir = f"{save_dir}/{patient_id}/{patient_id}_{session_id}_w{i+1}_ch{j+1}.pt"
+            sdir = os.path.join(final_dir, f"{patient_id}_w{i+1}_ch{j+1}.pt")
+            loc_df.loc[len(loc_df)] = [patient_id,i+1,sdir]
             
             if save:
                 ch_save = torch.from_numpy(ch).type(torch.FloatTensor)
                 ch_save = ch_save.unsqueeze(dim = 0)
-                torch.save(ch_save , sdir)
+                torch.save((ch_save, label), sdir)
     return loc_df
 
 def prep(path, save = False, mode = "per_win", save_dir = "data"):
@@ -175,7 +176,9 @@ def prep(path, save = False, mode = "per_win", save_dir = "data"):
         -path
     Output:
         -dir_csv: csv con todos los datos de guardado de las ventanas de cada edf.    
+    
     '''
+    folders = ["sane", "abnormal"]
     LEN_PAT = 7
     loc_df = pd.DataFrame(columns= ["Patient","N_Win", "Dir"], )
     save_dir = os.path.join(save_dir, mode)
@@ -193,39 +196,36 @@ def prep(path, save = False, mode = "per_win", save_dir = "data"):
         patient_id = patient[-LEN_PAT:]
 
         if patient_id in SANE:
-            label = 0
+            label = torch.zeros(1)
         if patient_id in ABNORMAL:
-            label = 1
+            label = torch.ones(1)
+        
+        patient_id = patient_id[:-4]
+        
+        folder = folders[int(label)]
+        final_dir = os.path.join(save_dir, folder)
 
         if save:
-            if not os.path.exists(os.path.join(save_dir, patient_id)):
-                os.makedirs(os.path.join(save_dir, patient_id))
-        
-        sessions = glob.glob(patient + '/**')
-        for session in sessions:
+            if not os.path.exists(final_dir):
+                os.makedirs(final_dir)
 
-            #Para guardar la sesion correspondiente
-            session_id = session[-SESION_LEN:-(SESION_LEN - 4)]
+        raw = mne.io.read_raw_edf(patient,preload=True)
+        try:
+            data = EDFprep(raw,random = False)
+        except:
+            print(f"{patient_id}_failed")
+            continue
 
-            edfs = glob.glob(session+ "/**/*.edf")
-            for edf in edfs:
-
-                raw = mne.io.read_raw_edf(edf,preload=True)
-                try:
-                    data = EDFprep(raw,random = False)
-                except:
-                    print(f"{patient_id}_{session_id} failed")
-                    continue
-                if mode == "per_win":
-                    loc_df = Save_win(data,loc_df,save_dir,patient_id,session_id, save)
-                elif mode == "per_channel":
-                    loc_df = Save_ch(data,loc_df,save_dir,patient_id,session_id,save)
+        if mode == "per_win":
+            loc_df = Save_win(data,loc_df,final_dir,patient_id,label, save)
+        elif mode == "per_channel":
+            loc_df = Save_ch(data,loc_df,final_dir,patient_id,label, save)
 
     if save:
         if mode == "per_channel":
-            loc_df.to_csv("prep_channels.csv", encoding= "utf-8" ,index = False)
+            loc_df.to_csv("down_prep_channels.csv", encoding= "utf-8" ,index = False)
         elif mode == "per_win":
-            loc_df.to_csv("prep_windows.csv", encoding= "utf-8", index = False)
+            loc_df.to_csv("down_prep_windows.csv", encoding= "utf-8", index = False)
                 
     return loc_df
 
