@@ -117,47 +117,52 @@ def downloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     x, y = batch
     model.train()
     model = model.to(device)
-    x, y = x.to(device), y.to(device)
+    x, y = x.to(device), y.type(torch.int64).to(device)
     y_pred = model(x)
-    y_pred = torch.argmax(y_pred, dim = 1, keepdim= True).type(torch.FloatTensor).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
-    loss = criterion(y_pred, y)
+    # y_pred = torch.argmax(y_pred, dim = 1, keepdim= True).type(torch.FloatTensor).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
+    # print(y.type())
+    # print(y_pred.type())
+
+    loss = criterion(y_pred, y.squeeze())
     return loss, y, y_pred
 
 def downtrain_epoch(model, train_dataset, criterion, optimizer, device = "cuda"):
     acc = 0
     e_loss = 0
-    count = 0
+    total_pred = 0
     for i, batch in enumerate(train_dataset):
         loss, y, y_pred = downloss(model, batch, criterion, device)
 
         optimizer.zero_grad()
-        loss.requires_grad = True
+        # loss.requires_grad = True
         loss.backward()
         optimizer.step()
 
         e_loss +=loss.item()
+        y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
     
-        acc += torch.sum(y == y_pred)
-        count +=1
+        acc += torch.sum(y == y_pred).item()
+        total_pred +=y.shape[0]
         print(f"Iter: {i + 1}/{len(train_dataset)}, Loss:{loss}")
-    acc = acc/count
-    e_loss = e_loss/count
+    acc = acc/total_pred
+    e_loss = e_loss/len(train_dataset)
     # print(f"Epoch train loss = {e_loss}")
     return e_loss, acc
 
 def downvalidate(model, val_dataset, criterion):
     acc = 0
     e_loss = 0
-    count = 0
+    total_pred = 0
     model.eval()
     with torch.no_grad():
         for i, batch in enumerate(val_dataset):
             loss, y, y_pred = downloss(model, batch, criterion)
             e_loss +=loss.item()
-            acc+=torch.sum(y==y_pred)
-            count +=1
-        acc = acc/count
-        e_loss = e_loss/count
+            y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
+            acc+=torch.sum(y==y_pred).item()
+            total_pred +=y.shape[0]
+        acc = acc/total_pred
+        e_loss = e_loss/len(val_dataset)
     return e_loss, acc
 
 def downtrain(model, epochs, train_dataset, val_dataset, criterion, optimizer, each = 50, state = None, name = ""):
@@ -204,4 +209,5 @@ def downtrain(model, epochs, train_dataset, val_dataset, criterion, optimizer, e
         state["bestloss"] = best_loss
         # Save last just in case, [includes loss!!!!]
         torch.save(state, f"LastDown{name}_{epoch + 1}.pt")
-        return state["loss"], state["acc"]
+    
+    return state["loss"], state["acc"]
