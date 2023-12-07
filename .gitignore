@@ -161,4 +161,10 @@ cython_debug/
 dataper_channel/
 data/
 prep_channels.csv
+prep_windows.csv
 data_down
+down_ch_**
+down_prep_**
+down_win_**
+ch_train_**
+ch_val_**
