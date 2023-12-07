@@ -122,7 +122,7 @@ class BarlowTwins(torch.nn.Module):
 
 class VICReg(torch.nn.Module):
 
-    def __init__(self, _conf):
+    def __init__(self):
         super().__init__()
 
         self.variance_loss_epsilon = 1e-04
