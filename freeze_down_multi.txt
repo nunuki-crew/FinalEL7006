@@ -1,0 +1,15 @@
+MULTI INFONCE:
+trainloader = DataLoader(train_dataset, batch_size = 350, shuffle = True, num_workers = 0)
+valloader = DataLoader(val_dataset, batch_size = 77, shuffle = False, num_workers = 0)
+model = SleepStager(n_chans = 19, pretext = False)
+enc, fc = torch.load("bestEncoderParamsmulti_inf.pt")
+model.encoder.load_state_dict(enc)
+
+criterion = nn.CrossEntropyLoss()
+
+#FREEZE
+for param in model.encoder.parameters():
+  param.requires_grad = False
+
+optimizer = torch.optim.Adam(model.final.parameters(), lr = 0.001)
+downtrain(model, 50, trainloader, valloader, criterion, optimizer, state = None, name = "multi_inf")

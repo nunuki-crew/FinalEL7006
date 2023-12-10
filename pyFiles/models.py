@@ -308,7 +308,7 @@ class SleepStager(nn.Module):
                             return_feats = True,)
         # Obtain linear input size
         self.emb_size = self.encoder.len_last_layer
-        self.out_size = (100 if self.emb_size > 1000 else int(self.emb_size/2)) 
+        self.out_size = (100 if self.emb_size > 1000 else int(self.emb_size/6)) 
         if pretext:
             # Projector
             self.final = nn.Sequential(
@@ -318,8 +318,8 @@ class SleepStager(nn.Module):
         else:
             # Classifier (Downstream)
             self.final = nn.Sequential(
-                                nn.Linear(self.emb_size, self.emb_size), 
-                                nn.Dropout(0.25),
+                                # nn.Linear(self.emb_size, self.emb_size), 
+                                nn.Dropout(0.5),
                                 nn.Linear(self.emb_size, self.out_size),
                                 nn.Linear(self.out_size, 2),) 
             

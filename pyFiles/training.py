@@ -140,7 +140,7 @@ def downtrain_epoch(model, train_dataset, criterion, optimizer, device = "cuda")
 
         e_loss +=loss.item()
         y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
-    
+        
         acc += torch.sum(y == y_pred).item()
         total_pred +=y.shape[0]
         print(f"Iter: {i + 1}/{len(train_dataset)}, Loss:{loss}")
