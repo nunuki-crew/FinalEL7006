@@ -1,0 +1,9 @@
+trainloader = DataLoader(train_dataset, batch_size = 1000, shuffle = True, num_workers = 8)
+valloader = DataLoader(val_dataset, batch_size = 1000, shuffle = False, num_workers = 8)
+
+model = SleepStager(n_chans = 1, pretext = True)
+criterion = InfoNceLoss(tau = 0.3)
+
+optimizer = torch.optim.Adam(model.parameters(), lr = 0.0001)
+
+pretext_train(model, 50, trainloader, valloader, criterion, optimizer, state = None, name = "single_vr")
