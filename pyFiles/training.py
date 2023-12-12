@@ -7,9 +7,11 @@ import os
 import pyFiles.dataprep as prep
 import numpy as np
 import torch
+import torch.nn.functional as F
 from torch import nn
 from pyFiles.losses import InfoNceLoss
 from pyFiles.losses import BarlowTwins
+# import torchmetrics
 
 
 """
@@ -113,18 +115,24 @@ def pretext_train(model, epochs, train_loader, val_loader, criterion, optimizer,
 Downstream
 """
 
-def downloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
+def downloss(model, batch, criterion = nn.BCELoss(), device = "cuda"):
     x, y = batch
     model.train()
     model = model.to(device)
-    x, y = x.to(device), y.type(torch.int64).to(device)
+    x, y = x.to(device), y.to(device)
     y_pred = model(x)
-    # y_pred = torch.argmax(y_pred, dim = 1, keepdim= True).type(torch.FloatTensor).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
-    # print(y.type())
-    # print(y_pred.type())
-
-    loss = criterion(y_pred, y.squeeze())
-    return loss, y, y_pred
+    # print(y_pred)
+    # print(y)
+    # Get a predictor available for testing accuracy
+    binary_pred = torch.zeros_like(y_pred)
+    sig_pred = F.sigmoid(y_pred)
+    # print(sig_pred)
+    for i in range(len(y_pred)):
+        if (sig_pred[i][0] > 0.5):
+            binary_pred[i][0] = 1
+    # print(binary_pred)
+    loss = criterion(y_pred, y)
+    return loss, y, binary_pred
 
 def downtrain_epoch(model, train_dataset, criterion, optimizer, device = "cuda"):
     acc = 0
@@ -139,12 +147,13 @@ def downtrain_epoch(model, train_dataset, criterion, optimizer, device = "cuda")
         optimizer.step()
 
         e_loss +=loss.item()
-        y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
+        # y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
         
-        acc += torch.sum(y == y_pred).item()
+        acc +=(y == y_pred).sum().item()
         total_pred +=y.shape[0]
         print(f"Iter: {i + 1}/{len(train_dataset)}, Loss:{loss}")
     acc = acc/total_pred
+
     e_loss = e_loss/len(train_dataset)
     # print(f"Epoch train loss = {e_loss}")
     return e_loss, acc
@@ -158,8 +167,11 @@ def downvalidate(model, val_dataset, criterion):
         for i, batch in enumerate(val_dataset):
             loss, y, y_pred = downloss(model, batch, criterion)
             e_loss +=loss.item()
-            y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
-            acc+=torch.sum(y==y_pred).item()
+            # y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
+            acc+=(y == y_pred).sum().item()
+            # print(acc)
+            # print(y)
+            # print(y_pred)
             total_pred +=y.shape[0]
         acc = acc/total_pred
         e_loss = e_loss/len(val_dataset)
