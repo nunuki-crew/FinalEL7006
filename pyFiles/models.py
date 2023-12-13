@@ -337,8 +337,8 @@ class SleepStager(nn.Module):
             # 
             exit = self.final(features)
         else:
-            p_size = self.p_size
-            feats_list = torch.empty((len(data), p_size, 1824)).cuda()
+            # p_size = self.p_size
+            feats_list = torch.empty((len(data), self.p_size, 1824)).cuda()
             for i in range(len(data)):
                 # print(data[i].shape)
                 # for j in range(64):

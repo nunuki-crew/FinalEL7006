@@ -1,0 +1,24 @@
+# trainloader = DataLoader(train_dataset, batch_size = 1, shuffle = True, num_workers = 0)
+trainloader = DataLoader(train_dataset, batch_size = 22, shuffle = True, num_workers = 0)
+valloader = DataLoader(val_dataset, batch_size = 12, shuffle = False, num_workers = 0)
+
+model = SleepStager(n_chans = 19, pretext = False, p_size = 32)
+enc, fc = torch.load("params\multis\VR\\attempt2\\bestEncoderParamsmulti_VR.pt")
+# enc, fc = torch.load("bestEncoderParamsmulti_VR.pt")
+# model.encoder.load_state_dict(enc)
+
+criterion = nn.CrossEntropyLoss()
+# criterion = nn.MSELoss()
+
+#FREEZE
+# for param in model.encoder.parameters():
+#   param.requires_grad = False
+
+optimizer = torch.optim.Adam(
+    [
+        {"params": model.encoder.parameters(), "lr": 1e-8},
+        {"params": model.final.parameters(), "lr": 5e-4},
+    ],
+    lr=5e-4,
+) 
+downtrain(model, 60, trainloader, valloader, criterion, optimizer, state = None, name = "multi_vr")
