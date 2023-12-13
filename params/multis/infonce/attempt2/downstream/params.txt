@@ -1,0 +1,15 @@
+trainloader = DataLoader(train_dataset, batch_size = 22, shuffle = True, num_workers = 2)
+valloader = DataLoader(val_dataset, batch_size = 12, shuffle = False, num_workers = 2)
+
+model = SleepStager(n_chans = 19, pretext = False)
+enc, fc = torch.load("D:\\bestEncoderParamsmulti_inf.pt")
+
+criterion = nn.CrossEntropyLoss(label_smoothing= 0.1)
+optimizer = torch.optim.Adam(
+    [
+        {"params": model.encoder.parameters(), "lr": 1e-7},
+        {"params": model.final.parameters(), "lr": 3e-4},
+    ],
+    lr=5e-4,
+) 
+downtrain(model, 30, trainloader, valloader, criterion, optimizer, state = None, name = "multi_inf")

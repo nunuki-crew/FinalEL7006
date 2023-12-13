@@ -119,6 +119,9 @@ def downloss(model, batch, criterion = nn.CrossEntropyLoss(), device = "cuda"):
     model = model.to(device)
     x, y = x.to(device), y.type(torch.int64).to(device)
     y_pred = model(x)
+    # print(y)
+    # print(y.squeeze())
+    # print(y_pred.squeeze())
     # y_pred = torch.argmax(y_pred, dim = 1, keepdim= True).type(torch.FloatTensor).to(device) # REVISAR FORMATO DE LABEL, POR AHORA ENTREGA 0 o 1, PODRIA SER [0, 1] y [1, 0]
     # print(y.type())
     # print(y_pred.type())
@@ -159,6 +162,7 @@ def downvalidate(model, val_dataset, criterion):
             loss, y, y_pred = downloss(model, batch, criterion)
             e_loss +=loss.item()
             y_pred = torch.argmax(y_pred, dim = 1,keepdim= True)
+            
             acc+=torch.sum(y==y_pred).item()
             total_pred +=y.shape[0]
         acc = acc/total_pred

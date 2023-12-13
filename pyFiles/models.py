@@ -295,6 +295,7 @@ class SleepStager(nn.Module):
         super(SleepStager, self).__init__()
         # Parameters
         self.n_chans = n_chans
+        self.pretext = pretext
         # Encoder
         self.encoder = SleepStagerChambon2018(
                             n_chans = n_chans, 
@@ -309,7 +310,7 @@ class SleepStager(nn.Module):
         # Obtain linear input size
         self.emb_size = self.encoder.len_last_layer
         self.out_size = (100 if self.emb_size > 1000 else int(self.emb_size/6)) 
-        if pretext:
+        if self.pretext:
             # Projector
             self.final = nn.Sequential(
                                 nn.Linear(self.emb_size, self.emb_size), 
@@ -317,11 +318,12 @@ class SleepStager(nn.Module):
                                 nn.Linear(self.emb_size, self.out_size),)
         else:
             # Classifier (Downstream)
-            self.final = nn.Sequential(
-                                # nn.Linear(self.emb_size, self.emb_size), 
-                                nn.Dropout(0.5),
-                                nn.Linear(self.emb_size, self.out_size),
-                                nn.Linear(self.out_size, 2),) 
+            self.final = RNNClassifier(input_size = self.emb_size, hidden_size = self.out_size, num_classes = 2)
+            
+            
+            # self.final = ModelVanillaRNN(n_input_features = self.emb_size,
+            #                             n_hidden_dimension = self.out_size,
+            #                             n_classes = 2,)
             
     def encode(self, data):
         # Useful!
@@ -329,7 +331,75 @@ class SleepStager(nn.Module):
     
     def forward(self, data):
         #
-        features = self.encoder(data)
-        # 
-        exit = self.final(features)
+        if self.pretext:
+            features = self.encoder(data)
+            # 
+            exit = self.final(features)
+        else:
+            p_size = 32
+            feats_list = torch.empty((len(data), p_size, 1824)).cuda()
+            for i in range(len(data)):
+                # print(data[i].shape)
+                # for j in range(64):
+                features = self.encoder(data[i]) 
+                # print(features)
+            # print(features[7])
+                feats_list[i] = torch.clone(features)
+            exit = self.final(feats_list)
+
+
         return exit
+
+class RNNClassifier(nn.Module):
+    def __init__(self, input_size, hidden_size, num_classes):
+        super(RNNClassifier, self).__init__()
+        
+        self.rnn = nn.RNN(input_size, hidden_size, num_layers = 1, batch_first=True)
+        
+        self.fc = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, x):
+        out, _ = self.rnn(x)
+        
+        last_output = out[:, -1, :]
+        
+        output = self.fc(last_output)
+        
+        return output
+    
+class ModelVanillaRNN(nn.Module):
+    def __init__(
+        self,
+        n_input_features=13,
+        n_hidden_dimension=32,
+        n_classes = 2,
+    ):
+        super(ModelVanillaRNN, self).__init__()
+        self.n_input_features = n_input_features
+        self.n_hidden_dimension = n_hidden_dimension
+        self.n_classes = n_classes
+        # Mi codigo
+        self.RNN = nn.Sequential(
+            nn.Linear(in_features = (self.n_input_features + self.n_hidden_dimension), out_features = self.n_hidden_dimension, bias = True),
+            nn.Tanh(),
+        )
+        self.border = nn.Linear(in_features = self.n_hidden_dimension, out_features = self.n_classes, bias = True)
+
+    def forward(self, x):
+      # Divido en trozos
+      x_sliced = torch.tensor_split(x, x.size()[1], dim=1)
+      # Valor inicial (dato)
+      h = torch.zeros(x.size()[0], self.n_hidden_dimension)
+      h = h.cuda()
+      # Iteramos
+      for fila in x_sliced:
+        fila = torch.squeeze(fila)
+        # print(fila.size())
+        h = self.RNN(torch.cat((fila, h), 1))
+      # Ultima capa
+      last = self.border(h)
+      # Salida
+      return last
+
+    # class_prediction = torch.argmax(y_predicted, dim = 1)
+
