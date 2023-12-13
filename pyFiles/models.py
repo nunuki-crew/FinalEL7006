@@ -350,6 +350,67 @@ class SleepStager(nn.Module):
 
 
         return exit
+    
+class SleepStagerSingle(nn.Module):
+    def __init__(self, n_chans, pretext = True, p_size = 32):
+        super(SleepStagerSingle, self).__init__()
+        # Parameters
+        self.n_chans = n_chans
+        self.pretext = pretext
+        self.p_size = p_size
+        # Encoder
+        self.encoder = SleepStagerChambon2018(
+                            n_chans = n_chans, 
+                            sfreq = 100, 
+                            n_conv_chs = 16, 
+                            time_conv_size_s = 0.5, 
+                            max_pool_size_s = 0.125, 
+                            pad_size_s = 0.25, 
+                            input_window_seconds = 10, 
+                            apply_batch_norm = False, 
+                            return_feats = True,)
+        # Obtain linear input size
+        self.emb_size = self.encoder.len_last_layer
+        self.out_size = (100 if self.emb_size > 1000 else int(self.emb_size/6)) 
+        if self.pretext:
+            # Projector
+            self.final = nn.Sequential(
+                                nn.Linear(self.emb_size, self.emb_size), 
+                                nn.Dropout(0.25),
+                                nn.Linear(self.emb_size, self.out_size),)
+        else:
+            # Classifier (Downstream)
+            self.final = RNNClassifier(input_size = self.emb_size, hidden_size = self.out_size, num_classes = 2)
+            
+            
+            # self.final = ModelVanillaRNN(n_input_features = self.emb_size,
+            #                             n_hidden_dimension = self.out_size,
+            #                             n_classes = 2,)
+            
+    def encode(self, data):
+        # Useful!
+        return self.encoder(data)
+    
+    def forward(self, data):
+        #
+        if self.pretext:
+            features = self.encoder(data)
+            # 
+            exit = self.final(features)
+        else:
+            p_size = self.p_size
+            feats_list = torch.empty((len(data), p_size, 96)).cuda()
+            for i in range(len(data)):
+                # print(data[i].shape)
+                # for j in range(64):
+                features = self.encoder(data[i]) 
+                # print(features)
+            # print(features[7])
+                feats_list[i] = torch.clone(features)
+            exit = self.final(feats_list)
+
+
+        return exit
 
 class RNNClassifier(nn.Module):
     def __init__(self, input_size, hidden_size, num_classes):
