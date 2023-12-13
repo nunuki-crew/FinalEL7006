@@ -291,11 +291,12 @@ class StagerNet(nn.Module):
 Sleep Stager
 """
 class SleepStager(nn.Module):
-    def __init__(self, n_chans, pretext = True):
+    def __init__(self, n_chans, pretext = True, p_size = 32):
         super(SleepStager, self).__init__()
         # Parameters
         self.n_chans = n_chans
         self.pretext = pretext
+        self.p_size = p_size
         # Encoder
         self.encoder = SleepStagerChambon2018(
                             n_chans = n_chans, 
@@ -336,7 +337,7 @@ class SleepStager(nn.Module):
             # 
             exit = self.final(features)
         else:
-            p_size = 32
+            p_size = self.p_size
             feats_list = torch.empty((len(data), p_size, 1824)).cuda()
             for i in range(len(data)):
                 # print(data[i].shape)
