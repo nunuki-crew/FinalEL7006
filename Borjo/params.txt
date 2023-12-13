@@ -1,0 +1,20 @@
+trainloader = DataLoader(train_dataset, batch_size = 32, shuffle = True, num_workers = 0)
+valloader = DataLoader(val_dataset, batch_size = 12, shuffle = False, num_workers = 0)
+
+model = SleepStagerSingle(n_chans = 1, pretext = False, p_size= p_size)
+enc, fc = torch.load("params\singles\VR\\attempt3\\bestEncoderParamssingle_vr.pt")
+model.encoder.load_state_dict(enc)
+
+criterion = nn.CrossEntropyLoss()
+
+for param in model.encoder.feature_extractor[0].parameters():
+    param.requires_grad = False
+
+optimizer = torch.optim.Adam(
+    [
+        {"params": model.encoder.parameters(), "lr": 3e-8},
+        {"params": model.final.parameters(), "lr": 3e-5},
+    ],
+    lr=5e-4,
+) 
+downtrain(model, 30, trainloader, valloader, criterion, optimizer, state = None, name = "single_VR")
